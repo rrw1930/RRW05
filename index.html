@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>动量守恒定律演示（边界限制版）</title>
+    <style>
+        /* 保持原有样式不变 */
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        canvas { border: 1px solid #ccc; background: #f8f8f8; }
+        .controls { margin: 10px 0; padding: 10px; border: 1px solid #ddd; }
+        input[type="number"] { width: 60px; margin-right: 10px; }
+        .formula { background: #fff3d0; padding: 15px; margin: 10px 0; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h2>动量守恒定律演示（边界限制版）</h2>
+    
+    <!-- 保持原有控制界面不变 -->
+    <div class="controls">
+        <button onclick="startAnimation()">开始演示</button>
+        <button onclick="reset()">重置</button>
+        <br><br>
+        小球1质量: <input type="number" id="m1" value="2" min="1"> kg
+        初速度: <input type="number" id="v1" value="3"> m/s
+        <br>
+        小球2质量: <input type="number" id="m2" value="4" min="1"> kg
+        初速度: <input type="number" id="v2" value="-1"> m/s
+    </div>
+
+    <canvas id="canvas" width="700" height="200"></canvas>
+
+    <div class="formula">
+        <p>动量守恒公式: 
+            <strong>m₁v₁ + m₂v₂ = m₁v₁' + m₂v₂'</strong>
+        </p>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 初始化小球属性
+        const balls = [
+            { x: 100, y: 100, vx: 3, radius: 20, color: '#FF6B6B' },
+            { x: 500, y: 100, vx: -1, radius: 28, color: '#4ECDC4' }
+        ];
+
+        let animationId;
+
+        // 新增边界碰撞检测函数
+        function checkWallCollision(ball) {
+            // 左边界检测
+            if (ball.x - ball.radius <= 0) {
+                ball.vx = Math.abs(ball.vx); // 速度取绝对值
+                ball.x = ball.radius; // 防止穿透边界
+            }
+            // 右边界检测
+            if (ball.x + ball.radius >= canvas.width) {
+                ball.vx = -Math.abs(ball.vx); // 速度取负绝对值
+                ball.x = canvas.width - ball.radius;
+            }
+        }
+
+        function updateBalls() {
+            balls.forEach(ball => {
+                ball.x += ball.vx;
+                checkWallCollision(ball); // 每次更新位置后检测边界碰撞
+            });
+
+            // 保持原有碰撞检测逻辑不变
+            const dx = balls[1].x - balls[0].x;
+            const distance = Math.abs(dx);
+            const minDistance = balls[0].radius + balls[1].radius;
+            
+            if (distance < minDistance) {
+                const m1 = parseFloat(document.getElementById('m1').value);
+                const m2 = parseFloat(document.getElementById('m2').value);
+                const v1 = balls[0].vx;
+                const v2 = balls[1].vx;
+                
+                const newV1 = ((m1 - m2)/(m1 + m2))*v1 + (2*m2/(m1 + m2))*v2;
+                const newV2 = (2*m1/(m1 + m2))*v1 + ((m2 - m1)/(m1 + m2))*v2;
+                
+                balls[0].vx = newV1;
+                balls[1].vx = newV2;
+
+                // 添加位置修正防止小球重叠
+                const overlap = minDistance - distance;
+                balls[0].x -= overlap * (balls[0].vx > 0 ? 1 : -1);
+                balls[1].x += overlap * (balls[1].vx > 0 ? 1 : -1);
+
+                // 保持原有结果显示逻辑不变
+                const totalBefore = (m1*v1 + m2*v2).toFixed(2);
+                const totalAfter = (m1*newV1 + m2*newV2).toFixed(2);
+                document.getElementById('results').innerHTML = `
+                    碰撞前总动量: ${totalBefore} kg·m/s<br>
+                    碰撞后总动量: ${totalAfter} kg·m/s
+                `;
+            }
+        }
+
+        // 保持其他函数（drawBall, animate, startAnimation, reset）不变
+        function drawBall(ball) {
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI*2);
+            ctx.fillStyle = ball.color;
+            ctx.fill();
+            ctx.strokeStyle = '#333';
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(ball.x, ball.y);
+            ctx.lineTo(ball.x + ball.vx*15, ball.y);
+            ctx.strokeStyle = ball.color;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            updateBalls();
+            balls.forEach(drawBall);
+            animationId = requestAnimationFrame(animate);
+        }
+
+        function startAnimation() {
+            cancelAnimationFrame(animationId);
+            balls[0].vx = parseFloat(document.getElementById('v1').value);
+            balls[1].vx = parseFloat(document.getElementById('v2').value);
+            balls[0].radius = parseFloat(document.getElementById('m1').value)*10;
+            balls[1].radius = parseFloat(document.getElementById('m2').value)*10;
+            balls[0].x = 100;
+            balls[1].x = 500;
+            animate();
+        }
+
+        function reset() {
+            cancelAnimationFrame(animationId);
+            document.getElementById('m1').value = 2;
+            document.getElementById('v1').value = 3;
+            document.getElementById('m2').value = 4;
+            document.getElementById('v2').value = -1;
+            startAnimation();
+        }
+
+        startAnimation();
+    </script>
+</body>
+</html>
